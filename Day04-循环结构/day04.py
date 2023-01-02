@@ -27,15 +27,61 @@
 最大公约数：能被两个或多个数同时求余不等于0的最大数；eg: 24, 16 最大公约数是 8
 最小公倍数：对两个或多个数求余不等于0的对小数； eg: 24, 16 最小公倍数是 24 * 16 // 8
 """
-x = int(input("x="))
-y = int(input("y="))
+# x = int(input("x="))
+# y = int(input("y="))
+#
+# if x > y:
+#     x, y = y, x
+#
+# # range(10, 0, -1) 区间设定是从大到小，那么需要使用负数步长
+# for factor in range(x, 0, -1):
+#     if x % factor == 0 and y % factor == 0:
+#         print(f"最大公约数为{factor}")
+#         print(f"最小公约数为{x * y // factor}")
+#         break
 
-if x > y:
-    x, y = y, x
 
-# range(10, 0, -1) 区间设定是从大到小，那么需要使用负数步长
-for factor in range(x, 0, -1):
-    if x % factor == 0 and y % factor == 0:
-        print(f"最大公约数为{factor}")
-        print(f"最小公约数为{x * y // factor}")
-        break
+'''
+练习3：打印如下所示的三角形图案。
+*
+**
+***
+****
+*****
+
+    *
+   **
+  ***
+ ****
+*****
+
+    *
+   ***
+  *****
+ *******
+*********
+'''
+
+row = int(input("请输入行数:"))
+for i in range(row):
+    for _ in range(i + 1):
+        # print 默认 end='\n' 换行符，用 end='' ,每行输出 * 后，不会自动换行，而是会继续写 *
+        print('*', end='')
+    print()
+
+
+for i in range(row):
+    for j in range(row):
+        if j < row - i - 1:
+            print(' ', end='')
+        else:
+            print('*', end='')
+    print()
+
+
+for i in range(row):
+    for _ in range(row - i - 1):
+        print(' ', end='')
+    for _ in range(2 * i + 1):
+        print('*', end='')
+    print()
