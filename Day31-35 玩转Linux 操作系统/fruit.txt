@@ -1,0 +1,5 @@
+1       |banana|      120
+2       |grape|       500
+3       |apple|       1230
+4       |watermelon|  80
+5       |orange|      400
