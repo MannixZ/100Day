@@ -336,7 +336,7 @@ show tables;
 
 1. 查看`show`命令的帮助。
 
-    ```MySQL
+    ```MySQLr
     ? show
     ```
 
