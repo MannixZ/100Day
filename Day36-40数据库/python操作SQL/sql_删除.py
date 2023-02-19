@@ -1,0 +1,34 @@
+import pymysql
+
+no = int(input('部门编号: '))
+
+# 1. 创建连接（Connection）
+conn = pymysql.connect(host='192.168.31.45', port=3306, user='guest', password='Guest.618', database='hrs', charset='utf8mb4')
+
+try:
+    # 2. 获取游标对象（Cursor）
+    with conn.cursor() as cursor:
+        # 3. 通过游标对象向数据库服务器发出SQL语句
+        # 删除多条
+        affected_rows = cursor.executemany(
+            'delete from `tb_dept` where `dno`=%s',
+            [(19), (22)]
+        )
+        if affected_rows == 2:
+            print('部门删除成功')
+        # 删除单条
+        # affected_rows = cursor.execute(
+        #     'delete from `tb_dept` where `dno`=%s',
+        #     (no)
+        # )
+        # if affected_rows == 1:
+        #     print('部门删除成功')
+    # 4. 提交事务（transaction）
+    conn.commit()
+except pymysql.MySQLError as err:
+    # 4. 回滚事务
+    conn.rollback()
+    print(type(err), err)
+finally:
+    # 5. 关闭连接释放资源
+    conn.close()
