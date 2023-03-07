@@ -37,6 +37,7 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    "polls"
 ]
 
 MIDDLEWARE = [
@@ -77,8 +78,14 @@ WSGI_APPLICATION = "hellodjango.wsgi.application"
 
 DATABASES = {
     "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": os.path.join(BASE_DIR, "db.sqlite3"),
+        "ENGINE": "django.db.backends.mysql",
+        "NAME": 'vote',
+        "HOST": "192.168.31.45",
+        "PORT": "3306",
+        "USER": "hellokitty",
+        "PASSWORD": 'Hellokitty.618',
+        "CHARSET": 'utf-8',
+        "TIME_ZONE": 'Asia/Chongqing',
     }
 }
 
@@ -119,4 +126,5 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/2.2/howto/static-files/
 
+STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static'), ]
 STATIC_URL = "/static/"
