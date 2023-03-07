@@ -37,7 +37,8 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
-    "polls"
+    "polls",
+    "debug_toolbar"
 ]
 
 MIDDLEWARE = [
@@ -48,6 +49,8 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "debug_toolbar.middleware.DebugToolbarMiddleware",
+    "polls.middlewares.check_login_middleware",
 ]
 
 ROOT_URLCONF = "hellodjango.urls"
@@ -128,3 +131,23 @@ USE_TZ = True
 
 STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static'), ]
 STATIC_URL = "/static/"
+
+# 配置会话的超时时间为1天（86400秒）
+SESSION_COOKIE_AGE = 86400
+# 设置为True在关闭浏览器窗口时session就过期
+SESSION_EXPIRE_AT_BROWSER_CLOSE = True
+# 配置将会话对象放到缓存中存储
+SESSION_ENGINE = 'django.contrib.sessions.backends.cache'
+# 配置使用哪一组缓存来保存会话
+SESSION_CACHE_ALIAS = 'default'
+# 修改 session 数据默认的序列化方式
+# SESSION_SERIALIZER = 'django.contrib.sessions.serializers.PickleSerializer'
+
+DEBUG_TOOLBAR_CONFIG = {
+    # 引入jQuery库
+    'JQUERY_URL': 'https://cdn.bootcss.com/jquery/3.3.1/jquery.min.js',
+    # 工具栏是否折叠
+    'SHOW_COLLAPSED': True,
+    # 是否显示工具栏
+    'SHOW_TOOLBAR_CALLBACK': lambda x: True,
+}

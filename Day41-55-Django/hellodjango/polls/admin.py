@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Subject, Teacher
+from .models import Subject, Teacher, User
 
 # Register your models here.
 
@@ -14,6 +14,12 @@ class TeacherModelAdmin(admin.ModelAdmin):
     search_fields = ('name', )
     ordering = ('no', )
 
+class UserModelAdmin(admin.ModelAdmin):
+    list_display = ('no', 'username', 'password', 'tel', 'reg_date', 'last_visit')
+    search_fields = ('name', )
+    ordering = ('no', )
 
+
+admin.site.register(User, UserModelAdmin)
 admin.site.register(Subject, SubjectModelAdmin)
 admin.site.register(Teacher, TeacherModelAdmin)
