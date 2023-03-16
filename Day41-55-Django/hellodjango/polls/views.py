@@ -1,24 +1,43 @@
 import io
+import json
 from urllib.parse import quote
 
 import xlwt
-from django.http import JsonResponse, HttpRequest, HttpResponse
+from bpmappers import RawField
+from django.http import JsonResponse, HttpRequest, HttpResponse, Http404
 from django.shortcuts import render, redirect
 from reportlab.pdfgen import canvas
+from bpmappers.djangomodel import ModelMapper
+
+from rest_framework import serializers
+from rest_framework.decorators import api_view
+from rest_framework.response import Response
 
 from .models import Subject, Teacher, User
 from .utils import *
 from .yzm import *
 
 
+
+# 自定义实现的分页器，和 settings 中的 DEFAULT_PAGINATION_CLASS 设置区分
+from rest_framework.pagination import PageNumberPagination
+
+class CustomizedPagination(PageNumberPagination):
+    # 默认页面大小
+    page_size = 5
+    # 页面大小对应的查询参数
+    page_size_query_param = 'size'
+    # 页面大小的最大值
+    max_page_size = 50
+
 # Create your views here.
 
-def show_subjects(request):
+def show_all_subjects(request):
     subjects = Subject.objects.all().order_by('no')
     return render(request, 'subjects.html', {'subjects': subjects})
 
 
-def show_teachers(request):
+def show_all_teachers(request):
     try:
         sno = int(request.GET.get('sno'))
         teachers = []
@@ -144,4 +163,111 @@ def get_teachers_data(request: HttpResponse):
     good_counts = [teacher.good_count for teacher in queryset]
     bad_counts = [teacher.bad_count for teacher in queryset]
     # return JsonResponse({'names': names, 'good_counts': good_counts, 'bad_counts': bad_counts})
-    return render(request, 'teachers_count.html', {'names': names, 'good_counts': good_counts, 'bad_counts': bad_counts})
+    return render(request, 'teachers_count.html',
+                  {'names': names, 'good_counts': good_counts, 'bad_counts': bad_counts})
+
+
+class SubjectMapper(ModelMapper):
+    isHot = RawField('is_hot')
+
+    class Meta:
+        model = Subject
+        exclude = ('is_hot',)
+
+
+def api_show_subjects(request: HttpResponse):
+    queryset = Subject.objects.all()
+    subjects = []
+    for subject in queryset:
+        subjects.append(SubjectMapper(subject).as_dict())
+    return JsonResponse(subjects, safe=False)
+
+
+class SubjectSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Subject
+        fields = ('no', 'name')
+
+from django.views.decorators.cache import cache_page
+# cache_page 和 method_decorator 属于声明式编程缓存
+# RESTful FBV 实现方法，基于 函数实现
+# @api_view(('GET',))
+# # 缓存装饰器
+# @cache_page(timeout=86400, cache='default')
+# def show_subjects(request: HttpRequest) -> HttpResponse:
+#     subjects = Subject.objects.all().order_by('no')
+#     # 创建序列化器对象并指定要序列化的模型
+#     serializer = SubjectSerializer(subjects, many=True)
+#     # 通过序列化器的data属性获得模型对应的字典并通过创建Response对象返回JSON格式的数据
+#     return Response(serializer.data)
+
+
+# get_redis_connection 属于编程式缓存
+from django_redis import get_redis_connection
+
+@api_view(('GET',))
+# 缓存装饰器
+def show_subjects(request: HttpRequest) -> HttpResponse:
+    """获取学科数据"""
+    redis_cli = get_redis_connection()
+    # 先尝试从缓存中获取学科数据
+    data = redis_cli.get('vote:polls:subjects')
+    if data:
+        # 如果获取到学科数据就进行反序列化操作
+        data = json.loads((data))
+    else:
+        # 如果缓存中没有获取到学科数据就查询数据库
+        queryset = Subject.objects.all()
+        data = SubjectSerializer(queryset, many=True).data
+        # 将查到的学科数据序列化后放到缓存中
+        redis_cli.set('vote:polls:subjects', json.dumps(data), ex=86400)
+    return Response({"code": 20000, 'subjects': data})
+
+
+
+# RESTful CBV 实现方法，基于 类实现
+from rest_framework.generics import ListAPIView  # ListAPIView 自带实现 GET 方法
+from rest_framework.viewsets import ModelViewSet  # ModelViewSet 自带实现 GET、POST、PUT、PATCH、DELETE 方法， urls 中需要注册路由才可使用对应继承的类
+from django.utils.decorators import method_decorator
+
+
+@method_decorator(decorator=cache_page(timeout=86400, cache='default'), name='get')
+class SubjectView(ModelViewSet):
+    # 通过queryset指定如何获取学科数据
+    queryset = Subject.objects.all()
+    # 通过serializer_class指定如何序列化学科数据
+    serializer_class = SubjectSerializer
+    # 使用自定义的分页器, 如果不希望数据分页，可以将pagination_class属性设置为None来取消默认的分页器。
+    pagination_class = CustomizedPagination
+
+class TeacherSerialize(serializers.ModelSerializer):
+    class Meta:
+        model = Teacher
+        fields = ('__all__')
+
+
+# FBV 实现通过学科找到对应的老师
+@api_view(('GET',))
+def show_teachers(request: HttpRequest) -> HttpResponse:
+    try:
+        sno = int(request.GET.get('no'))
+        subject = Subject.objects.only('name').get(no=sno)
+        teachers = Teacher.objects.filter(subject=subject).defer('subject').order_by('no')
+        subject_seri = SubjectSerializer(subject)
+        teacher_seri = TeacherSerialize(teachers, many=True)
+        return Response({'subject': subject_seri.data, 'teacher': teacher_seri.data})
+    except (TypeError, ValueError, Subject.DoesNotExist):
+        return Response(status=404)
+
+# 同上，改为 CBV 实现
+class TeacherView(ListAPIView):
+    serializer_class = TeacherSerialize
+
+    def get_queryset(self):
+        queryset = Teacher.objects.defer('subject')
+        try:
+            sno = self.request.GET.get('sno', '')
+            queryset = queryset.filter(subject__no=sno)
+            return queryset
+        except ValueError:
+            raise Http404('No teachers found.')
